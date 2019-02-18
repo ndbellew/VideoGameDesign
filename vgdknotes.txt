@@ -1,0 +1,37 @@
+Your game is "droomrooll" 
+.
+..
+.. ..
+.... .... ...
+.-...-..-.---.....-.-.-
+nathan++
+Train Game with colours
+
+what is a .exe
+	it has one entry point called main
+	start()
+	loop()
+.dll
+	dynamic
+	link
+	library
+bin 
+lib
+src
+	main.cpp
+	library.cpp
+include
+	library.h
+deploy
+	.dll
+	.bmp
+	.exe
+build 
+	.exe
+to make a simlink you  do s
+ln -s SDL2-2.0.5 SDL2.0
+when compiling an sdl you have to tell it where the sdl  
+search build command line for linux
+search compile command line for linux
+search copy to deploy command line for linux
+all for SDL2

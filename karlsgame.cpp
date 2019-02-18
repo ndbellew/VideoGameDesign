@@ -1,0 +1,196 @@
+//karls game.cpp
+
+   #include   <string>
+   #include   <iostream>
+   #include   <vector>
+   #include   <sstream>
+   #include   <SDL2/SDL.h>
+   
+    using namespace std;
+  
+    class AnimationFrame {
+       SDL_Texture *frame;
+        int time,w,h; // ms
+      public:
+         AnimationFrame(SDL_Texture *newFrame,int newTime=100) {
+             frame=newFrame;
+             time=newTime;
+         }
+         AnimationFrame(SDL_Renderer *ren,const char *imagePath,int newTime=100){
+             SDL_Surface *bmp = SDL_LoadBMP(imagePath);
+             if (bmp == NULL){
+                 std::cout << "SDL_LoadBMP Error: " << SDL_GetError() << std::endl;
+                 SDL_Quit();
+             }
+             SDL_SetColorKey(bmp,SDL_TRUE,SDL_MapRGB(bmp->format,0,255,0));
+             w=bmp->w;
+             h=bmp->h;
+             frame = SDL_CreateTextureFromSurface(ren, bmp);
+             SDL_FreeSurface(bmp);
+             if (frame == NULL){
+                 std::cout << "SDL_CreateTextureFromSurface Error: " << SDL_GetError() <<
+                 std::endl;
+                 SDL_Quit();
+             }
+             time=newTime;
+         }
+         void show(SDL_Renderer *ren,int x=0,int y=0){
+          SDL_Rect src,dest;
+          dest.x=x; dest.y=y; dest.w=w; dest.h=h;
+          src.x=0; src.y=0; src.w=w; src.h=h;
+          SDL_RenderCopy(ren, frame, &src, &dest);
+        }
+        int getTime() {
+            return time;
+        }
+        void destroy() {
+            SDL_DestroyTexture(frame);
+        }
+    };
+  
+    class Animation {
+      protected:
+      vector<AnimationFrame *> frames;
+      int totalTime;
+      public:
+      Animation() {
+          totalTime=0;
+      }
+      void addFrame(AnimationFrame *c) {
+          frames.push_back(c);
+          totalTime+=c->getTime();
+      }
+      virtual void show(SDL_Renderer *ren,int time /*ms*/,int x=0,int y=0) {
+                                       
+            int aTime=time % totalTime;
+            int tTime=0;
+            unsigned int i=0;
+            for (i=0;i<frames.size();i++) {
+                tTime+=frames[i]->getTime();
+                if (aTime<=tTime) break;
+            }
+            frames[i]->show(ren,x,y);
+          }
+         virtual void destroy() {
+            for (unsigned int i=0;i<frames.size();i++)
+                 frames[i]->destroy();
+         }
+    };
+     class Sprite : public Animation {
+         float x,dx,ax,y,dy,ay;
+         public:
+         Sprite():Animation() {
+             x=0.0; dx=0.0; ax=0.0;
+             y=0.0; dy=0.0; ay=0.0;
+         }
+         void addFrames(SDL_Renderer *ren,const char imagePath,int count) {
+         }
+  
+     };
+  
+     class Game {
+         protected:
+         SDL_Window *win;
+         SDL_Renderer *ren;
+         int ticks;
+         bool finished;
+         public:
+         virtual void init(const char *gameName,int maxW=640,int maxH=480,int
+           startX=100,int startY=100) {
+             if (SDL_Init(SDL_INIT_VIDEO) != 0){
+                  std::cout << "SDL_Init Error: " << SDL_GetError() << std::endl;
+                  return;
+             }
+            win = SDL_CreateWindow(gameName, startX, startY, maxW, maxH, SDL_WINDOW_SHOWN);
+            if (win == NULL){
+                 std::cout << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
+                 SDL_Quit();
+                 return;
+            }
+            ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED |
+               SDL_RENDERER_PRESENTVSYNC);
+            if (ren == NULL){
+                 SDL_DestroyWindow(win);
+                 std::cout << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
+                 SDL_Quit();
+                 return;
+           }
+      }
+       virtual void done() {
+           SDL_DestroyRenderer(ren);
+           SDL_DestroyWindow(win);
+           SDL_Quit();
+       }
+     void run() {
+                                               
+          int start=SDL_GetTicks();
+          finished=false;
+          while(!finished) {
+            SDL_Event event;
+            if (SDL_PollEvent(&event)) {
+              if (event.type == SDL_WINDOWEVENT) {
+                  if (event.window.event==SDL_WINDOWEVENT_CLOSE)
+                    finished=true;
+              }
+              if (event.type==SDL_KEYDOWN) {
+                  if (event.key.keysym.sym==SDLK_ESCAPE)
+                    finished=true;
+              }
+              if (!finished) handleEvent(event);
+            }
+            ticks=SDL_GetTicks();
+            SDL_RenderClear(ren);
+            show();
+            SDL_RenderPresent(ren);
+          }
+          int end=SDL_GetTicks();
+          cout << "FPS "<< (300.0*1000.0/float(end-start))<<endl;
+         }
+         virtual void show()=0;
+         virtual void handleEvent(SDL_Event &event)=0;
+    };
+ 
+    class KarlsGame:public Game {
+        Animation a;
+        Animation world;
+        int x,y;
+        int dx,dy;
+        public:
+        void init(const char *gameName="Karl's Game",int maxW=640,int maxH=480,int
+         startX=100,int startY=100){
+          Game::init(gameName);
+          a.addFrame(new AnimationFrame(ren,"desert.bmp"));
+          //a.addFrame(new AnimationFrame(ren,"hello2.bmp",500));
+          dx=1;
+          dy=1;
+          x=0;
+          y=0;
+          /*for (int i=1;i<=8;i++) {
+            stringstream ss;
+            ss << "Planet" << i << ".bmp";
+            world.addFrame(new AnimationFrame(ren,ss.str().c_str(),100));
+          }*/
+        }
+        void show() {
+            a.show(ren,ticks);
+            world.show(ren,ticks,x,y);
+            x+=dx;
+            y+=dy;
+ 
+         }
+         void handleEvent(SDL_Event &event) {
+         }
+         void done() {
+           a.destroy();
+           Game::done();
+         }
+                                            
+   };
+
+   int main(int argc,char **argv) {
+        KarlsGame g;
+        g.init();
+        g.run();
+        g.done();
+        return 0;
+    }
